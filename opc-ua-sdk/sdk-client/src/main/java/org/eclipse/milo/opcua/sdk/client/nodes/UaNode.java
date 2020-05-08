@@ -15,16 +15,17 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 import org.eclipse.milo.opcua.sdk.client.OpcUaClient;
 import org.eclipse.milo.opcua.sdk.client.api.NodeCache;
-import org.eclipse.milo.opcua.sdk.client.api.nodes.Node;
-import org.eclipse.milo.opcua.sdk.client.api.nodes.VariableNode;
 import org.eclipse.milo.opcua.sdk.client.model.nodes.variables.PropertyTypeNode;
 import org.eclipse.milo.opcua.sdk.core.QualifiedProperty;
+import org.eclipse.milo.opcua.sdk.core.nodes.Node;
 import org.eclipse.milo.opcua.stack.core.AttributeId;
 import org.eclipse.milo.opcua.stack.core.Identifiers;
 import org.eclipse.milo.opcua.stack.core.StatusCodes;
+import org.eclipse.milo.opcua.stack.core.UaException;
 import org.eclipse.milo.opcua.stack.core.serialization.UaEnumeration;
 import org.eclipse.milo.opcua.stack.core.serialization.UaStructure;
 import org.eclipse.milo.opcua.stack.core.types.builtin.DataValue;
@@ -44,12 +45,12 @@ import org.eclipse.milo.opcua.stack.core.types.structured.BrowseResult;
 import org.eclipse.milo.opcua.stack.core.types.structured.ReadResponse;
 import org.eclipse.milo.opcua.stack.core.types.structured.ReadValueId;
 import org.eclipse.milo.opcua.stack.core.types.structured.ReferenceDescription;
+import org.eclipse.milo.opcua.stack.core.types.structured.WriteResponse;
 import org.eclipse.milo.opcua.stack.core.types.structured.WriteValue;
 
 import static com.google.common.collect.Lists.newArrayList;
 import static java.util.concurrent.CompletableFuture.completedFuture;
 import static org.eclipse.milo.opcua.sdk.core.util.StreamUtil.opt2stream;
-import static org.eclipse.milo.opcua.stack.core.types.builtin.DataValue.valueOnly;
 import static org.eclipse.milo.opcua.stack.core.types.builtin.unsigned.Unsigned.uint;
 import static org.eclipse.milo.opcua.stack.core.util.ConversionUtil.l;
 import static org.eclipse.milo.opcua.stack.core.util.FutureUtils.failedUaFuture;
@@ -58,14 +59,476 @@ public abstract class UaNode implements Node {
 
     protected final NodeCache nodeCache;
 
-    protected final OpcUaClient client;
-    protected final NodeId nodeId;
+    private NodeId nodeId;
+    private NodeClass nodeClass;
+    private QualifiedName browseName;
+    private LocalizedText displayName;
+    private LocalizedText description;
+    private UInteger writeMask;
+    private UInteger userWriteMask;
 
-    public UaNode(OpcUaClient client, NodeId nodeId) {
+    protected final OpcUaClient client;
+
+    public UaNode(
+        OpcUaClient client,
+        NodeId nodeId,
+        NodeClass nodeClass,
+        QualifiedName browseName,
+        LocalizedText displayName,
+        LocalizedText description,
+        UInteger writeMask,
+        UInteger userWriteMask
+    ) {
+
         this.client = client;
         this.nodeId = nodeId;
+        this.nodeClass = nodeClass;
+        this.browseName = browseName;
+        this.displayName = displayName;
+        this.description = description;
+        this.writeMask = writeMask;
+        this.userWriteMask = userWriteMask;
 
         nodeCache = client.getNodeCache();
+    }
+
+    /**
+     * {@inheritDoc}
+     * <p>
+     * The returned attribute is the most recently seen value; it is not read live from the server.
+     */
+    @Override
+    public synchronized NodeId getNodeId() {
+        return nodeId;
+    }
+
+    /**
+     * {@inheritDoc}
+     * <p>
+     * The returned attribute is the most recently seen value; it is not read live from the server.
+     */
+    @Override
+    public synchronized NodeClass getNodeClass() {
+        return nodeClass;
+    }
+
+    /**
+     * {@inheritDoc}
+     * <p>
+     * The returned attribute is the most recently seen value; it is not read live from the server.
+     */
+    @Override
+    public synchronized QualifiedName getBrowseName() {
+        return browseName;
+    }
+
+    /**
+     * {@inheritDoc}
+     * <p>
+     * The returned attribute is the most recently seen value; it is not read live from the server.
+     */
+    @Override
+    public synchronized LocalizedText getDisplayName() {
+        return displayName;
+    }
+
+    /**
+     * {@inheritDoc}
+     * <p>
+     * The returned attribute is the most recently seen value; it is not read live from the server.
+     */
+    @Override
+    public synchronized LocalizedText getDescription() {
+        return description;
+    }
+
+    /**
+     * {@inheritDoc}
+     * <p>
+     * The returned attribute is the most recently seen value; it is not read live from the server.
+     */
+    @Override
+    public synchronized UInteger getWriteMask() {
+        return writeMask;
+    }
+
+    /**
+     * {@inheritDoc}
+     * <p>
+     * The returned attribute is the most recently seen value; it is not read live from the server.
+     */
+    @Override
+    public synchronized UInteger getUserWriteMask() {
+        return userWriteMask;
+    }
+
+    /**
+     * {@inheritDoc}
+     * <p>
+     * The attribute is only update locally; it is not written to the server.
+     */
+    @Override
+    public synchronized void setNodeId(NodeId nodeId) {
+        this.nodeId = nodeId;
+    }
+
+    /**
+     * {@inheritDoc}
+     * <p>
+     * The attribute is only update locally; it is not written to the server.
+     */
+    @Override
+    public synchronized void setNodeClass(NodeClass nodeClass) {
+        this.nodeClass = nodeClass;
+    }
+
+    /**
+     * {@inheritDoc}
+     * <p>
+     * The attribute is only update locally; it is not written to the server.
+     */
+    @Override
+    public synchronized void setBrowseName(QualifiedName browseName) {
+        this.browseName = browseName;
+    }
+
+    /**
+     * {@inheritDoc}
+     * <p>
+     * The attribute is only update locally; it is not written to the server.
+     */
+    @Override
+    public synchronized void setDisplayName(LocalizedText displayName) {
+        this.displayName = displayName;
+    }
+
+    /**
+     * {@inheritDoc}
+     * <p>
+     * The attribute is only update locally; it is not written to the server.
+     */
+    @Override
+    public synchronized void setDescription(LocalizedText description) {
+        this.description = description;
+    }
+
+    /**
+     * {@inheritDoc}
+     * <p>
+     * The attribute is only update locally; it is not written to the server.
+     */
+    @Override
+    public synchronized void setWriteMask(UInteger writeMask) {
+        this.writeMask = writeMask;
+    }
+
+    /**
+     * {@inheritDoc}
+     * <p>
+     * The attribute is only update locally; it is not written to the server.
+     */
+    @Override
+    public synchronized void setUserWriteMask(UInteger userWriteMask) {
+        this.userWriteMask = userWriteMask;
+    }
+
+    /**
+     * Read the NodeId attribute for this Node from the server and update the local attribute if
+     * the operation succeeds.
+     *
+     * @return the {@link NodeId} read from the server.
+     * @throws UaException if a service- or operation-level error occurs.
+     */
+    public NodeId readNodeId() throws UaException {
+        NodeId nodeId = (NodeId) getGoodValueOrThrow(
+            readAttribute(AttributeId.NodeId)
+        );
+        setNodeId(nodeId);
+        return nodeId;
+    }
+
+    /**
+     * Read the NodeClass attribute for this Node from the server and update the local attribute if
+     * the operation succeeds.
+     *
+     * @return the {@link NodeClass} read from the server.
+     * @throws UaException if a service- or operation-level error occurs.
+     */
+    public NodeClass readNodeClass() throws UaException {
+        Integer value = (Integer) getGoodValueOrThrow(
+            readAttribute(AttributeId.NodeClass)
+        );
+        NodeClass nodeClass = NodeClass.from(value);
+        setNodeClass(nodeClass);
+        return nodeClass;
+    }
+
+    /**
+     * Read the BrowseName attribute for this Node from the server and update the local attribute
+     * if the operation succeeds.
+     *
+     * @return the {@link QualifiedName} read from the server.
+     * @throws UaException if a service- or operation-level error occurs.
+     */
+    public QualifiedName readBrowseName() throws UaException {
+        QualifiedName browseName = (QualifiedName) getGoodValueOrThrow(
+            readAttribute(AttributeId.BrowseName)
+        );
+        setBrowseName(browseName);
+        return browseName;
+    }
+
+    /**
+     * Read the DisplayName attribute for this Node from the server and update the local attribute
+     * if the operation succeeds.
+     *
+     * @return the {@link LocalizedText} read from the server.
+     * @throws UaException if a service- or operation-level error occurs.
+     */
+    public LocalizedText readDisplayName() throws UaException {
+        LocalizedText displayName = (LocalizedText) getGoodValueOrThrow(
+            readAttribute(AttributeId.DisplayName)
+        );
+        setDisplayName(displayName);
+        return displayName;
+    }
+
+    /**
+     * Read the Description attribute for this Node from the server and update the local attribute
+     * if the operation succeeds.
+     *
+     * @return the {@link LocalizedText} read from the server.
+     * @throws UaException if a service- or operation-level error occurs.
+     */
+    public LocalizedText readDescription() throws UaException {
+        LocalizedText description = (LocalizedText) getGoodValueOrThrow(
+            readAttribute(AttributeId.Description)
+        );
+        setDescription(description);
+        return description;
+    }
+
+    /**
+     * Read the WriteMask attribute for this Node from the server and update the local attribute if
+     * the operation succeeds.
+     *
+     * @return the {@link UInteger} read from the server.
+     * @throws UaException if a service- or operation-level error occurs.
+     */
+    public UInteger readWriteMask() throws UaException {
+        UInteger writeMask = (UInteger) getGoodValueOrThrow(
+            readAttribute(AttributeId.UserWriteMask)
+        );
+        setWriteMask(writeMask);
+        return writeMask;
+    }
+
+    /**
+     * Read the UserWriteMask attribute for this Node from the server and update the local
+     * attribute if the operation succeeds.
+     *
+     * @return the {@link UInteger} read from the server.
+     * @throws UaException if a service- or operation-level error occurs.
+     */
+    public UInteger readUserWriteMask() throws UaException {
+        UInteger userWriteMask = (UInteger) getGoodValueOrThrow(
+            readAttribute(AttributeId.UserWriteMask)
+        );
+        setUserWriteMask(userWriteMask);
+        return userWriteMask;
+    }
+
+    /**
+     * Write a new NodeId attribute for this Node to the server and update the local attribute if
+     * the operation succeeds.
+     *
+     * @param nodeId the {@link NodeId} to write to the server.
+     * @throws UaException if a service- or operation-level error occurs.
+     */
+    public void writeNodeId(NodeId nodeId) throws UaException {
+        DataValue value = DataValue.valueOnly(new Variant(nodeId));
+        StatusCode statusCode = writeAttribute(AttributeId.NodeId, value);
+
+        if (statusCode == null || statusCode.isGood()) {
+            setNodeId(nodeId);
+        } else {
+            throw new UaException(statusCode, "write NodeId failed");
+        }
+    }
+
+    /**
+     * Write a new NodeClass attribute for this Node to the server and update the local attribute
+     * if the operation succeeds.
+     *
+     * @param nodeClass the {@link NodeClass} to write to the server.
+     * @throws UaException if a service- or operation-level error occurs.
+     */
+    public void writeNodeClass(NodeClass nodeClass) throws UaException {
+        DataValue value = DataValue.valueOnly(new Variant(nodeClass));
+        StatusCode statusCode = writeAttribute(AttributeId.NodeClass, value);
+
+        if (statusCode == null || statusCode.isGood()) {
+            setNodeClass(nodeClass);
+        } else {
+            throw new UaException(statusCode, "write NodeClass failed");
+        }
+    }
+
+    /**
+     * Write a new BrowseName attribute for this Node to the server and update the local attribute
+     * if the operation succeeds.
+     *
+     * @param browseName the {@link QualifiedName} to write to the server.
+     * @throws UaException if a service- or operation-level error occurs.
+     */
+    public void writeBrowseName(QualifiedName browseName) throws UaException {
+        DataValue value = DataValue.valueOnly(new Variant(browseName));
+        StatusCode statusCode = writeAttribute(AttributeId.BrowseName, value);
+
+        if (statusCode == null || statusCode.isGood()) {
+            setBrowseName(browseName);
+        } else {
+            throw new UaException(statusCode, "write BrowseName failed");
+        }
+    }
+
+    /**
+     * Write a new DisplayName attribute for this Node to the server and update the local attribute
+     * if the operation succeeds.
+     *
+     * @param displayName the {@link LocalizedText} to write to the server.
+     * @throws UaException if a service- or operation-level error occurs.
+     */
+    public void writeDisplayName(LocalizedText displayName) throws UaException {
+        DataValue value = DataValue.valueOnly(new Variant(displayName));
+        StatusCode statusCode = writeAttribute(AttributeId.DisplayName, value);
+
+        if (statusCode == null || statusCode.isGood()) {
+            setDisplayName(displayName);
+        } else {
+            throw new UaException(statusCode, "write DisplayName failed");
+        }
+    }
+
+    /**
+     * Write a new Description attribute for this Node to the server and update the local attribute
+     * if the operation succeeds.
+     *
+     * @param description the {@link LocalizedText} to write to the server.
+     * @throws UaException if a service- or operation-level error occurs.
+     */
+    public void writeDescription(LocalizedText description) throws UaException {
+        DataValue value = DataValue.valueOnly(new Variant(description));
+        StatusCode statusCode = writeAttribute(AttributeId.Description, value);
+
+        if (statusCode == null || statusCode.isGood()) {
+            setDescription(description);
+        } else {
+            throw new UaException(statusCode, "write Description failed");
+        }
+    }
+
+    /**
+     * Write a new WriteMask attribute for this Node to the server and update the local attribute
+     * if the operation succeeds.
+     *
+     * @param writeMask the {@link UInteger} to write to the server.
+     * @throws UaException if a service- or operation-level error occurs.
+     */
+    public void writeWriteMask(UInteger writeMask) throws UaException {
+        DataValue value = DataValue.valueOnly(new Variant(writeMask));
+        StatusCode statusCode = writeAttribute(AttributeId.WriteMask, value);
+
+        if (statusCode == null || statusCode.isGood()) {
+            setWriteMask(writeMask);
+        } else {
+            throw new UaException(statusCode, "write WriteMask failed");
+        }
+    }
+
+    /**
+     * Write a new UserWriteMask attribute for this Node to the server and update the local
+     * attribute if the operation succeeds.
+     *
+     * @param userWriteMask the {@link UInteger} to write to the server.
+     * @throws UaException if a service- or operation-level error occurs.
+     */
+    public void writeUserWriteMask(UInteger userWriteMask) throws UaException {
+        DataValue value = DataValue.valueOnly(new Variant(userWriteMask));
+        StatusCode statusCode = writeAttribute(AttributeId.UserWriteMask, value);
+
+        if (statusCode == null || statusCode.isGood()) {
+            setUserWriteMask(userWriteMask);
+        } else {
+            throw new UaException(statusCode, "write UserWriteMask failed");
+        }
+    }
+
+    /**
+     * Read the attribute identified by an {@code attributeId} from the server.
+     * <p>
+     * This operation does not update the local attribute.
+     *
+     * @param attributeId the {@link AttributeId} of the attribute to read.
+     * @return a {@link DataValue} containing the attribute value.
+     * @throws UaException if a service-level error occurs.
+     */
+    public DataValue readAttribute(AttributeId attributeId) throws UaException {
+        try {
+            return readAttributeAsync(attributeId).get();
+        } catch (ExecutionException | InterruptedException e) {
+            throw UaException.extract(e)
+                .orElse(new UaException(StatusCodes.Bad_UnexpectedError, e));
+        }
+    }
+
+    /**
+     * Write {@code value} to the attribute identified by {@code attributeId}.
+     * <p>
+     * This operation does not update the local attribute.
+     *
+     * @param attributeId the {@link AttributeId} of the attribute to write.
+     * @param value       a {@link DataValue} containing the attribute value.
+     * @return the {@link StatusCode} from the write operation.
+     * @throws UaException if a service-level error occurs.
+     */
+    public StatusCode writeAttribute(AttributeId attributeId, DataValue value) throws UaException {
+        try {
+            return writeAttributeAsync(attributeId, value).get();
+        } catch (ExecutionException | InterruptedException e) {
+            throw UaException.extract(e)
+                .orElse(new UaException(StatusCodes.Bad_UnexpectedError, e));
+        }
+    }
+
+    public CompletableFuture<DataValue> readAttributeAsync(AttributeId attributeId) {
+        ReadValueId readValueId = new ReadValueId(
+            nodeId,
+            attributeId.uid(),
+            null,
+            QualifiedName.NULL_VALUE
+        );
+
+        CompletableFuture<ReadResponse> future = client.read(
+            0.0,
+            TimestampsToReturn.Both,
+            newArrayList(readValueId)
+        );
+
+        return future.thenApply(response -> response.getResults()[0]);
+    }
+
+    public CompletableFuture<StatusCode> writeAttributeAsync(AttributeId attributeId, DataValue value) {
+        WriteValue writeValue = new WriteValue(
+            nodeId,
+            attributeId.uid(),
+            null,
+            value
+        );
+
+        CompletableFuture<WriteResponse> future = client.write(newArrayList(writeValue));
+
+        return future.thenApply(response -> response.getResults()[0]);
     }
 
     protected CompletableFuture<PropertyTypeNode> getPropertyNode(QualifiedProperty<?> property) {
@@ -111,7 +574,7 @@ public abstract class UaNode implements Node {
 
     public <T> CompletableFuture<T> getProperty(QualifiedProperty<T> property) {
         return getPropertyNode(property)
-            .thenCompose(VariableNode::getValue)
+            .thenCompose(UaVariableNode::getValue)
             .thenApply(value -> cast(value, property.getJavaType()));
     }
 
@@ -122,7 +585,7 @@ public abstract class UaNode implements Node {
 
     protected CompletableFuture<DataValue> readProperty(QualifiedProperty<?> property) {
         return getPropertyNode(property)
-            .thenCompose(VariableNode::readValue);
+            .thenCompose(UaVariableNode::readValue);
     }
 
     protected CompletableFuture<StatusCode> writeProperty(QualifiedProperty<?> property, DataValue value) {
@@ -130,209 +593,66 @@ public abstract class UaNode implements Node {
             .thenCompose(node -> node.writeValue(value));
     }
 
-    protected CompletableFuture<DataValue> readAttribute(AttributeId attributeId) {
-        Optional<DataValue> opt =
-            AttributeId.BASE_NODE_ATTRIBUTES.contains(attributeId) ?
-                nodeCache.getAttribute(nodeId, attributeId) : Optional.empty();
+    /**
+     * Gets the attribute value out of the {@link DataValue} or fails if the {@link StatusCode} is bad.
+     *
+     * @param readFuture the {@link CompletableFuture} providing the {@link DataValue}.
+     * @return the attribute value.
+     */
+    protected CompletableFuture<Object> getAttributeOrFail(CompletableFuture<DataValue> readFuture) {
+        return readFuture.thenCompose(value -> {
+            StatusCode statusCode = value.getStatusCode();
 
-        return opt.map(CompletableFuture::completedFuture).orElseGet(() -> {
-            ReadValueId readValueId = new ReadValueId(
-                nodeId, attributeId.uid(), null, QualifiedName.NULL_VALUE
-            );
-
-            CompletableFuture<ReadResponse> future =
-                client.read(0.0, TimestampsToReturn.Both, newArrayList(readValueId));
-
-            return future.thenApply(response -> {
-                DataValue value = l(response.getResults()).get(0);
-
-                if (attributeId != AttributeId.Value) {
-                    nodeCache.putAttribute(nodeId, attributeId, value);
+            if (statusCode == null || statusCode.isGood()) {
+                try {
+                    return completedFuture(value.getValue().getValue());
+                } catch (Throwable t) {
+                    return failedUaFuture(t, StatusCodes.Bad_UnexpectedError);
                 }
-
-                return value;
-            });
-        });
-    }
-
-    protected CompletableFuture<StatusCode> writeAttribute(AttributeId attributeId, DataValue value) {
-        WriteValue writeValue = new WriteValue(
-            nodeId, attributeId.uid(), null, value
-        );
-
-        return client.write(newArrayList(writeValue)).thenApply(response -> {
-            StatusCode statusCode = l(response.getResults()).get(0);
-
-            if (statusCode.isGood()) {
-                nodeCache.invalidate(nodeId, attributeId);
+            } else {
+                return failedUaFuture(statusCode);
             }
-
-            return statusCode;
         });
     }
 
     /**
-     * Gets the attribute of type {@code T} out of the {@link DataValue} or fails if the {@link StatusCode} was bad or
-     * a type conversion error occurred.
+     * Get the value out of a {@link DataValue}, throwing if the {@link StatusCode} is bad quality.
      *
-     * @param readFuture the {@link CompletableFuture} providing the {@link DataValue}.
-     * @param <T>        the type of the attribute to get.
-     * @return the attribute value.
+     * @param value the {@link DataValue}.
+     * @return the value Object from a {@link DataValue}.
+     * @throws UaException with any non-good {@link StatusCode} is bad quality.
      */
-    @SuppressWarnings("unchecked")
-    protected <T> CompletableFuture<T> getAttributeOrFail(CompletableFuture<DataValue> readFuture) {
-        return readFuture.thenCompose(value -> {
-            if (value.getStatusCode().isGood()) {
-                try {
-                    return completedFuture((T) value.getValue().getValue());
-                } catch (Throwable t) {
-                    return failedUaFuture(t, StatusCodes.Bad_TypeMismatch);
-                }
-            } else {
-                return failedUaFuture(value.getStatusCode());
-            }
-        });
+    protected Object getGoodValueOrThrow(DataValue value) throws UaException {
+        StatusCode statusCode = value.getStatusCode();
+
+        if (statusCode == null || statusCode.isGood()) {
+            return value.getValue().getValue();
+        } else {
+            throw new UaException(statusCode);
+        }
     }
 
-    @Override
-    public CompletableFuture<NodeId> getNodeId() {
-        return getAttributeOrFail(readNodeId());
+    /**
+     * Call the Browse service to get this {@link UaNode}s references.
+     *
+     * @param referenceTypeId the {@link NodeId} of the ReferenceType, including subtypes, to get.
+     * @param forward         {@code true} to get forward references, {@code false} for inverse references..
+     * @return a List of {@link ReferenceDescription}s.
+     */
+    public List<ReferenceDescription> getReferences(NodeId referenceTypeId, boolean forward) {
+        return null; // TODO
     }
 
-    @Override
-    public CompletableFuture<NodeClass> getNodeClass() {
-        return this.<Integer>getAttributeOrFail(readNodeClass())
-            .thenApply(NodeClass::from);
+    public CompletableFuture<List<ReferenceDescription>> getReferencesAsync(NodeId referenceTypeId, boolean forward) {
+        return null; // TODO
     }
 
-    @Override
-    public CompletableFuture<QualifiedName> getBrowseName() {
-        return getAttributeOrFail(readBrowseName());
+    public List<UaNode> getReferencedNodes(NodeId referenceTypeId, boolean forward) {
+        return null; // TODO
     }
 
-    @Override
-    public CompletableFuture<LocalizedText> getDisplayName() {
-        return getAttributeOrFail(readDisplayName());
-    }
-
-    @Override
-    public CompletableFuture<LocalizedText> getDescription() {
-        return getAttributeOrFail(readDescription());
-    }
-
-    @Override
-    public CompletableFuture<UInteger> getWriteMask() {
-        return getAttributeOrFail(readWriteMask());
-    }
-
-    @Override
-    public CompletableFuture<UInteger> getUserWriteMask() {
-        return getAttributeOrFail(readUserWriteMask());
-    }
-
-    @Override
-    public CompletableFuture<StatusCode> setNodeId(NodeId nodeId) {
-        return writeNodeId(valueOnly(new Variant(nodeId)));
-    }
-
-    @Override
-    public CompletableFuture<StatusCode> setNodeClass(NodeClass nodeClass) {
-        return writeNodeClass(valueOnly(new Variant(nodeClass)));
-    }
-
-    @Override
-    public CompletableFuture<StatusCode> setBrowseName(QualifiedName browseName) {
-        return writeBrowseName(valueOnly(new Variant(browseName)));
-    }
-
-    @Override
-    public CompletableFuture<StatusCode> setDisplayName(LocalizedText displayName) {
-        return writeDisplayName(valueOnly(new Variant(displayName)));
-    }
-
-    @Override
-    public CompletableFuture<StatusCode> setDescription(LocalizedText description) {
-        return writeDescription(valueOnly(new Variant(description)));
-    }
-
-    @Override
-    public CompletableFuture<StatusCode> setWriteMask(UInteger writeMask) {
-        return writeWriteMask(valueOnly(new Variant(writeMask)));
-    }
-
-    @Override
-    public CompletableFuture<StatusCode> setUserWriteMask(UInteger userWriteMask) {
-        return writeUserWriteMask(valueOnly(new Variant(userWriteMask)));
-    }
-
-    @Override
-    public CompletableFuture<DataValue> readNodeId() {
-        return readAttribute(AttributeId.NodeId);
-    }
-
-    @Override
-    public CompletableFuture<DataValue> readNodeClass() {
-        return readAttribute(AttributeId.NodeClass);
-    }
-
-    @Override
-    public CompletableFuture<DataValue> readBrowseName() {
-        return readAttribute(AttributeId.BrowseName);
-    }
-
-    @Override
-    public CompletableFuture<DataValue> readDisplayName() {
-        return readAttribute(AttributeId.DisplayName);
-    }
-
-    @Override
-    public CompletableFuture<DataValue> readDescription() {
-        return readAttribute(AttributeId.Description);
-    }
-
-    @Override
-    public CompletableFuture<DataValue> readWriteMask() {
-        return readAttribute(AttributeId.WriteMask);
-    }
-
-    @Override
-    public CompletableFuture<DataValue> readUserWriteMask() {
-        return readAttribute(AttributeId.UserWriteMask);
-    }
-
-    @Override
-    public CompletableFuture<StatusCode> writeNodeId(DataValue value) {
-        return writeAttribute(AttributeId.NodeId, value);
-    }
-
-    @Override
-    public CompletableFuture<StatusCode> writeNodeClass(DataValue value) {
-        return writeAttribute(AttributeId.NodeClass, value);
-    }
-
-    @Override
-    public CompletableFuture<StatusCode> writeBrowseName(DataValue value) {
-        return writeAttribute(AttributeId.BrowseName, value);
-    }
-
-    @Override
-    public CompletableFuture<StatusCode> writeDisplayName(DataValue value) {
-        return writeAttribute(AttributeId.DisplayName, value);
-    }
-
-    @Override
-    public CompletableFuture<StatusCode> writeDescription(DataValue value) {
-        return writeAttribute(AttributeId.Description, value);
-    }
-
-    @Override
-    public CompletableFuture<StatusCode> writeWriteMask(DataValue value) {
-        return writeAttribute(AttributeId.WriteMask, value);
-    }
-
-    @Override
-    public CompletableFuture<StatusCode> writeUserWriteMask(DataValue value) {
-        return writeAttribute(AttributeId.UserWriteMask, value);
+    public CompletableFuture<List<UaNode>> getReferencedNodesAsync(NodeId referenceTypeId, boolean forward) {
+        return null; // TODO
     }
 
     /**

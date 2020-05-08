@@ -28,7 +28,7 @@ import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Multimaps;
 import org.eclipse.milo.opcua.sdk.client.OpcUaClient;
-import org.eclipse.milo.opcua.sdk.client.api.nodes.VariableNode;
+import org.eclipse.milo.opcua.sdk.client.nodes.UaVariableNode;
 import org.eclipse.milo.opcua.sdk.server.util.GroupMapCollate;
 import org.eclipse.milo.opcua.stack.core.Identifiers;
 import org.eclipse.milo.opcua.stack.core.StatusCodes;
@@ -257,7 +257,7 @@ public class BatchModifyMonitoredItems {
     }
 
     private static CompletableFuture<UInteger> readOperationLimit(OpcUaClient client) {
-        CompletableFuture<VariableNode> nodeFuture = client.getAddressSpace().getVariableNode(
+        CompletableFuture<UaVariableNode> nodeFuture = client.getAddressSpace().getVariableNode(
             Identifiers.Server_ServerCapabilities_OperationLimits_MaxMonitoredItemsPerCall
         );
 

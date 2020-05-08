@@ -62,32 +62,32 @@ public class UaReferenceTypeNode extends UaNode implements ReferenceTypeNode {
 
     @Override
     public CompletableFuture<DataValue> readIsAbstract() {
-        return readAttribute(AttributeId.IsAbstract);
+        return readAttributeAsync(AttributeId.IsAbstract);
     }
 
     @Override
     public CompletableFuture<DataValue> readSymmetric() {
-        return readAttribute(AttributeId.Symmetric);
+        return readAttributeAsync(AttributeId.Symmetric);
     }
 
     @Override
     public CompletableFuture<DataValue> readInverseName() {
-        return readAttribute(AttributeId.InverseName);
+        return readAttributeAsync(AttributeId.InverseName);
     }
 
     @Override
     public CompletableFuture<StatusCode> writeIsAbstract(DataValue value) {
-        return writeAttribute(AttributeId.IsAbstract, value);
+        return writeAttributeAsync(AttributeId.IsAbstract, value);
     }
 
     @Override
     public CompletableFuture<StatusCode> writeSymmetric(DataValue value) {
-        return writeAttribute(AttributeId.Symmetric, value);
+        return writeAttributeAsync(AttributeId.Symmetric, value);
     }
 
     @Override
     public CompletableFuture<StatusCode> writeInverseName(DataValue value) {
-        return writeAttribute(AttributeId.InverseName, value);
+        return writeAttributeAsync(AttributeId.InverseName, value);
     }
 
     /**

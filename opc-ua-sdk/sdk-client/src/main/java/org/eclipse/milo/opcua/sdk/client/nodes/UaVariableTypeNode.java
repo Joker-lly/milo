@@ -82,52 +82,52 @@ public class UaVariableTypeNode extends UaNode implements VariableTypeNode {
 
     @Override
     public CompletableFuture<DataValue> readValue() {
-        return readAttribute(AttributeId.Value);
+        return readAttributeAsync(AttributeId.Value);
     }
 
     @Override
     public CompletableFuture<DataValue> readDataType() {
-        return readAttribute(AttributeId.DataType);
+        return readAttributeAsync(AttributeId.DataType);
     }
 
     @Override
     public CompletableFuture<DataValue> readValueRank() {
-        return readAttribute(AttributeId.ValueRank);
+        return readAttributeAsync(AttributeId.ValueRank);
     }
 
     @Override
     public CompletableFuture<DataValue> readArrayDimensions() {
-        return readAttribute(AttributeId.ArrayDimensions);
+        return readAttributeAsync(AttributeId.ArrayDimensions);
     }
 
     @Override
     public CompletableFuture<DataValue> readIsAbstract() {
-        return readAttribute(AttributeId.IsAbstract);
+        return readAttributeAsync(AttributeId.IsAbstract);
     }
 
     @Override
     public CompletableFuture<StatusCode> writeValue(DataValue value) {
-        return writeAttribute(AttributeId.Value, value);
+        return writeAttributeAsync(AttributeId.Value, value);
     }
 
     @Override
     public CompletableFuture<StatusCode> writeDataType(DataValue value) {
-        return writeAttribute(AttributeId.DataType, value);
+        return writeAttributeAsync(AttributeId.DataType, value);
     }
 
     @Override
     public CompletableFuture<StatusCode> writeValueRank(DataValue value) {
-        return writeAttribute(AttributeId.ValueRank, value);
+        return writeAttributeAsync(AttributeId.ValueRank, value);
     }
 
     @Override
     public CompletableFuture<StatusCode> writeArrayDimensions(DataValue value) {
-        return writeAttribute(AttributeId.ArrayDimensions, value);
+        return writeAttributeAsync(AttributeId.ArrayDimensions, value);
     }
 
     @Override
     public CompletableFuture<StatusCode> writeIsAbstract(DataValue value) {
-        return writeAttribute(AttributeId.IsAbstract, value);
+        return writeAttributeAsync(AttributeId.IsAbstract, value);
     }
 
     /**

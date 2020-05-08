@@ -44,12 +44,12 @@ public class UaDataTypeNode extends UaNode implements DataTypeNode {
 
     @Override
     public CompletableFuture<DataValue> readIsAbstract() {
-        return readAttribute(AttributeId.IsAbstract);
+        return readAttributeAsync(AttributeId.IsAbstract);
     }
 
     @Override
     public CompletableFuture<StatusCode> writeIsAbstract(DataValue value) {
-        return writeAttribute(AttributeId.IsAbstract, value);
+        return writeAttributeAsync(AttributeId.IsAbstract, value);
     }
 
     /**

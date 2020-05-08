@@ -15,16 +15,14 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 
 import org.eclipse.milo.opcua.sdk.client.OpcUaClient;
-import org.eclipse.milo.opcua.sdk.client.api.nodes.Node;
-import org.eclipse.milo.opcua.sdk.client.api.nodes.ObjectNode;
-import org.eclipse.milo.opcua.sdk.client.api.nodes.ObjectTypeNode;
-import org.eclipse.milo.opcua.sdk.client.api.nodes.VariableNode;
+import org.eclipse.milo.opcua.sdk.core.nodes.ObjectNode;
 import org.eclipse.milo.opcua.sdk.core.nodes.ObjectNodeProperties;
 import org.eclipse.milo.opcua.stack.core.AttributeId;
 import org.eclipse.milo.opcua.stack.core.Identifiers;
 import org.eclipse.milo.opcua.stack.core.StatusCodes;
 import org.eclipse.milo.opcua.stack.core.types.builtin.ByteString;
 import org.eclipse.milo.opcua.stack.core.types.builtin.DataValue;
+import org.eclipse.milo.opcua.stack.core.types.builtin.LocalizedText;
 import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
 import org.eclipse.milo.opcua.stack.core.types.builtin.QualifiedName;
 import org.eclipse.milo.opcua.stack.core.types.builtin.StatusCode;
@@ -48,17 +46,61 @@ import static org.eclipse.milo.opcua.stack.core.util.FutureUtils.failedUaFuture;
 
 public class UaObjectNode extends UaNode implements ObjectNode {
 
-    public UaObjectNode(OpcUaClient client, NodeId nodeId) {
-        super(client, nodeId);
+    private UByte eventNotifier;
+
+    public UaObjectNode(
+        OpcUaClient client,
+        NodeId nodeId,
+        NodeClass nodeClass,
+        QualifiedName browseName,
+        LocalizedText displayName,
+        LocalizedText description,
+        UInteger writeMask,
+        UInteger userWriteMask,
+        UByte eventNotifier
+    ) {
+
+        super(client, nodeId, nodeClass, browseName, displayName, description, writeMask, userWriteMask);
+
+        this.eventNotifier = eventNotifier;
     }
 
-    public CompletableFuture<? extends Node> getComponent(QualifiedName browseName) {
+    @Override
+    public UByte getEventNotifier() {
+        return eventNotifier;
+    }
+
+    @Override
+    public void setEventNotifier(UByte eventNotifier) {
+        this.eventNotifier = eventNotifier;
+    }
+
+    public CompletableFuture<UByte> getEventNotifierAsync() {
+        return getAttributeOrFail(readEventNotifierAsync())
+            .thenApply(UByte.class::cast);
+    }
+
+    public CompletableFuture<StatusCode> setEventNotifierAsync(UByte eventNotifier) {
+        return writeEventNotifierAsync(valueOnly(new Variant(eventNotifier)));
+    }
+
+    @Override
+    public CompletableFuture<DataValue> readEventNotifierAsync() {
+        return readAttributeAsync(AttributeId.EventNotifier);
+    }
+
+    @Override
+    public CompletableFuture<StatusCode> writeEventNotifierAsync(DataValue value) {
+        return writeAttributeAsync(AttributeId.EventNotifier, value);
+    }
+
+    public CompletableFuture<? extends UaNode> getComponent(QualifiedName browseName) {
         UInteger nodeClassMask = uint(NodeClass.Object.getValue() | NodeClass.Variable.getValue());
         UInteger resultMask = uint(BrowseResultMask.All.getValue());
 
         CompletableFuture<BrowseResult> future = client.browse(
             new BrowseDescription(
-                nodeId,
+                getNodeId(),
                 BrowseDirection.Forward,
                 Identifiers.HasComponent,
                 false,
@@ -70,10 +112,10 @@ public class UaObjectNode extends UaNode implements ObjectNode {
         return future.thenCompose(result -> {
             List<ReferenceDescription> references = l(result.getReferences());
 
-            Optional<CompletableFuture<? extends Node>> node = references.stream()
+            Optional<CompletableFuture<? extends UaNode>> node = references.stream()
                 .filter(r -> browseName.equals(r.getBrowseName()))
                 .flatMap(r -> {
-                    Optional<CompletableFuture<? extends Node>> opt = r.getNodeId()
+                    Optional<CompletableFuture<? extends UaNode>> opt = r.getNodeId()
                         .local(client.getNamespaceTable())
                         .map(id -> client.getAddressSpace().createNode(id));
 
@@ -95,13 +137,13 @@ public class UaObjectNode extends UaNode implements ObjectNode {
         }
     }
 
-    public CompletableFuture<? extends ObjectNode> getObjectComponent(QualifiedName browseName) {
+    public CompletableFuture<? extends UaObjectNode> getObjectComponent(QualifiedName browseName) {
         UInteger nodeClassMask = uint(NodeClass.Object.getValue());
         UInteger resultMask = uint(BrowseResultMask.All.getValue());
 
         CompletableFuture<BrowseResult> future = client.browse(
             new BrowseDescription(
-                nodeId,
+                getNodeId(),
                 BrowseDirection.Forward,
                 Identifiers.HasComponent,
                 false,
@@ -113,10 +155,10 @@ public class UaObjectNode extends UaNode implements ObjectNode {
         return future.thenCompose(result -> {
             List<ReferenceDescription> references = l(result.getReferences());
 
-            Optional<CompletableFuture<ObjectNode>> node = references.stream()
+            Optional<CompletableFuture<UaObjectNode>> node = references.stream()
                 .filter(r -> browseName.equals(r.getBrowseName()))
                 .flatMap(r -> {
-                    Optional<CompletableFuture<ObjectNode>> opt = r.getNodeId()
+                    Optional<CompletableFuture<UaObjectNode>> opt = r.getNodeId()
                         .local(client.getNamespaceTable())
                         .map(id -> client.getAddressSpace().getObjectNode(id));
 
@@ -128,7 +170,7 @@ public class UaObjectNode extends UaNode implements ObjectNode {
         });
     }
 
-    public CompletableFuture<? extends VariableNode> getVariableComponent(String namespaceUri, String name) {
+    public CompletableFuture<? extends UaVariableNode> getVariableComponent(String namespaceUri, String name) {
         UShort namespaceIndex = client.getNamespaceTable().getIndex(namespaceUri);
 
         if (namespaceIndex != null) {
@@ -138,13 +180,13 @@ public class UaObjectNode extends UaNode implements ObjectNode {
         }
     }
 
-    public CompletableFuture<? extends VariableNode> getVariableComponent(QualifiedName browseName) {
+    public CompletableFuture<? extends UaVariableNode> getVariableComponent(QualifiedName browseName) {
         UInteger nodeClassMask = uint(NodeClass.Variable.getValue());
         UInteger resultMask = uint(BrowseResultMask.All.getValue());
 
         CompletableFuture<BrowseResult> future = client.browse(
             new BrowseDescription(
-                nodeId,
+                getNodeId(),
                 BrowseDirection.Forward,
                 Identifiers.HasComponent,
                 false,
@@ -156,10 +198,10 @@ public class UaObjectNode extends UaNode implements ObjectNode {
         return future.thenCompose(result -> {
             List<ReferenceDescription> references = l(result.getReferences());
 
-            Optional<CompletableFuture<VariableNode>> node = references.stream()
+            Optional<CompletableFuture<UaVariableNode>> node = references.stream()
                 .filter(r -> browseName.equals(r.getBrowseName()))
                 .flatMap(r -> {
-                    Optional<CompletableFuture<VariableNode>> opt = r.getNodeId()
+                    Optional<CompletableFuture<UaVariableNode>> opt = r.getNodeId()
                         .local(client.getNamespaceTable())
                         .map(id -> client.getAddressSpace().getVariableNode(id));
 
@@ -171,13 +213,13 @@ public class UaObjectNode extends UaNode implements ObjectNode {
         });
     }
 
-    public CompletableFuture<? extends ObjectTypeNode> getTypeDefinition() {
+    public CompletableFuture<? extends UaObjectTypeNode> getTypeDefinition() {
         UInteger nodeClassMask = uint(NodeClass.ObjectType.getValue());
         UInteger resultMask = uint(BrowseResultMask.All.getValue());
 
         CompletableFuture<BrowseResult> future = client.browse(
             new BrowseDescription(
-                nodeId,
+                getNodeId(),
                 BrowseDirection.Forward,
                 Identifiers.HasTypeDefinition,
                 false,
@@ -189,9 +231,9 @@ public class UaObjectNode extends UaNode implements ObjectNode {
         return future.thenCompose(result -> {
             List<ReferenceDescription> references = l(result.getReferences());
 
-            Optional<ObjectTypeNode> node = references.stream()
+            Optional<UaObjectTypeNode> node = references.stream()
                 .flatMap(r -> {
-                    Optional<ObjectTypeNode> opt = r.getNodeId()
+                    Optional<UaObjectTypeNode> opt = r.getNodeId()
                         .local(client.getNamespaceTable())
                         .map(id -> client.getAddressSpace().createObjectTypeNode(id));
 
@@ -202,26 +244,6 @@ public class UaObjectNode extends UaNode implements ObjectNode {
             return node.map(CompletableFuture::completedFuture)
                 .orElse(failedUaFuture(StatusCodes.Bad_NotFound));
         });
-    }
-
-    @Override
-    public CompletableFuture<UByte> getEventNotifier() {
-        return getAttributeOrFail(readEventNotifier());
-    }
-
-    @Override
-    public CompletableFuture<StatusCode> setEventNotifier(UByte eventNotifier) {
-        return writeEventNotifier(valueOnly(new Variant(eventNotifier)));
-    }
-
-    @Override
-    public CompletableFuture<DataValue> readEventNotifier() {
-        return readAttribute(AttributeId.EventNotifier);
-    }
-
-    @Override
-    public CompletableFuture<StatusCode> writeEventNotifier(DataValue value) {
-        return writeAttribute(AttributeId.EventNotifier, value);
     }
 
     /**

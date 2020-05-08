@@ -16,7 +16,6 @@ import java.util.concurrent.CompletableFuture;
 
 import org.eclipse.milo.opcua.sdk.client.OpcUaClient;
 import org.eclipse.milo.opcua.sdk.client.api.nodes.VariableNode;
-import org.eclipse.milo.opcua.sdk.client.api.nodes.VariableTypeNode;
 import org.eclipse.milo.opcua.sdk.core.nodes.VariableNodeProperties;
 import org.eclipse.milo.opcua.stack.core.AttributeId;
 import org.eclipse.milo.opcua.stack.core.Identifiers;
@@ -53,7 +52,7 @@ public class UaVariableNode extends UaNode implements VariableNode {
         super(client, nodeId);
     }
 
-    public CompletableFuture<? extends VariableNode> getVariableComponent(String namespaceUri, String name) {
+    public CompletableFuture<? extends UaVariableNode> getVariableComponent(String namespaceUri, String name) {
         UShort namespaceIndex = client.getNamespaceTable().getIndex(namespaceUri);
 
         if (namespaceIndex != null) {
@@ -63,7 +62,7 @@ public class UaVariableNode extends UaNode implements VariableNode {
         }
     }
 
-    public CompletableFuture<? extends VariableNode> getVariableComponent(QualifiedName browseName) {
+    public CompletableFuture<? extends UaVariableNode> getVariableComponent(QualifiedName browseName) {
         UInteger nodeClassMask = uint(NodeClass.Variable.getValue());
         UInteger resultMask = uint(BrowseResultMask.All.getValue());
 
@@ -81,10 +80,10 @@ public class UaVariableNode extends UaNode implements VariableNode {
         return future.thenCompose(result -> {
             List<ReferenceDescription> references = l(result.getReferences());
 
-            Optional<CompletableFuture<VariableNode>> node = references.stream()
+            Optional<CompletableFuture<UaVariableNode>> node = references.stream()
                 .filter(r -> browseName.equals(r.getBrowseName()))
                 .flatMap(r -> {
-                    Optional<CompletableFuture<VariableNode>> opt = r.getNodeId()
+                    Optional<CompletableFuture<UaVariableNode>> opt = r.getNodeId()
                         .local(client.getNamespaceTable())
                         .map(id -> client.getAddressSpace().getVariableNode(id));
 
@@ -96,7 +95,7 @@ public class UaVariableNode extends UaNode implements VariableNode {
         });
     }
 
-    public CompletableFuture<? extends VariableTypeNode> getTypeDefinition() {
+    public CompletableFuture<? extends UaVariableTypeNode> getTypeDefinition() {
         UInteger nodeClassMask = uint(NodeClass.VariableType.getValue());
         UInteger resultMask = uint(BrowseResultMask.All.getValue());
 
@@ -114,9 +113,9 @@ public class UaVariableNode extends UaNode implements VariableNode {
         return future.thenCompose(result -> {
             List<ReferenceDescription> references = l(result.getReferences());
 
-            Optional<VariableTypeNode> node = references.stream()
+            Optional<UaVariableTypeNode> node = references.stream()
                 .flatMap(r -> {
-                    Optional<VariableTypeNode> opt = r.getNodeId()
+                    Optional<UaVariableTypeNode> opt = r.getNodeId()
                         .local(client.getNamespaceTable())
                         .map(id -> client.getAddressSpace().createVariableTypeNode(id));
 
@@ -211,82 +210,82 @@ public class UaVariableNode extends UaNode implements VariableNode {
 
     @Override
     public CompletableFuture<DataValue> readValue() {
-        return readAttribute(AttributeId.Value);
+        return readAttributeAsync(AttributeId.Value);
     }
 
     @Override
     public CompletableFuture<DataValue> readDataType() {
-        return readAttribute(AttributeId.DataType);
+        return readAttributeAsync(AttributeId.DataType);
     }
 
     @Override
     public CompletableFuture<DataValue> readValueRank() {
-        return readAttribute(AttributeId.ValueRank);
+        return readAttributeAsync(AttributeId.ValueRank);
     }
 
     @Override
     public CompletableFuture<DataValue> readArrayDimensions() {
-        return readAttribute(AttributeId.ArrayDimensions);
+        return readAttributeAsync(AttributeId.ArrayDimensions);
     }
 
     @Override
     public CompletableFuture<DataValue> readAccessLevel() {
-        return readAttribute(AttributeId.AccessLevel);
+        return readAttributeAsync(AttributeId.AccessLevel);
     }
 
     @Override
     public CompletableFuture<DataValue> readUserAccessLevel() {
-        return readAttribute(AttributeId.UserAccessLevel);
+        return readAttributeAsync(AttributeId.UserAccessLevel);
     }
 
     @Override
     public CompletableFuture<DataValue> readMinimumSamplingInterval() {
-        return readAttribute(AttributeId.MinimumSamplingInterval);
+        return readAttributeAsync(AttributeId.MinimumSamplingInterval);
     }
 
     @Override
     public CompletableFuture<DataValue> readHistorizing() {
-        return readAttribute(AttributeId.Historizing);
+        return readAttributeAsync(AttributeId.Historizing);
     }
 
     @Override
     public CompletableFuture<StatusCode> writeValue(DataValue value) {
-        return writeAttribute(AttributeId.Value, value);
+        return writeAttributeAsync(AttributeId.Value, value);
     }
 
     @Override
     public CompletableFuture<StatusCode> writeDataType(DataValue value) {
-        return writeAttribute(AttributeId.DataType, value);
+        return writeAttributeAsync(AttributeId.DataType, value);
     }
 
     @Override
     public CompletableFuture<StatusCode> writeValueRank(DataValue value) {
-        return writeAttribute(AttributeId.ValueRank, value);
+        return writeAttributeAsync(AttributeId.ValueRank, value);
     }
 
     @Override
     public CompletableFuture<StatusCode> writeArrayDimensions(DataValue value) {
-        return writeAttribute(AttributeId.ArrayDimensions, value);
+        return writeAttributeAsync(AttributeId.ArrayDimensions, value);
     }
 
     @Override
     public CompletableFuture<StatusCode> writeAccessLevel(DataValue value) {
-        return writeAttribute(AttributeId.AccessLevel, value);
+        return writeAttributeAsync(AttributeId.AccessLevel, value);
     }
 
     @Override
     public CompletableFuture<StatusCode> writeUserAccessLevel(DataValue value) {
-        return writeAttribute(AttributeId.UserAccessLevel, value);
+        return writeAttributeAsync(AttributeId.UserAccessLevel, value);
     }
 
     @Override
     public CompletableFuture<StatusCode> writeMinimumSamplingInterval(DataValue value) {
-        return writeAttribute(AttributeId.MinimumSamplingInterval, value);
+        return writeAttributeAsync(AttributeId.MinimumSamplingInterval, value);
     }
 
     @Override
     public CompletableFuture<StatusCode> writeHistorizing(DataValue value) {
-        return writeAttribute(AttributeId.Historizing, value);
+        return writeAttributeAsync(AttributeId.Historizing, value);
     }
 
     /**

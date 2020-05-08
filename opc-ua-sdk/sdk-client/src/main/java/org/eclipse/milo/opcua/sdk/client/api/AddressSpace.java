@@ -13,16 +13,18 @@ package org.eclipse.milo.opcua.sdk.client.api;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
-import org.eclipse.milo.opcua.sdk.client.api.nodes.DataTypeNode;
-import org.eclipse.milo.opcua.sdk.client.api.nodes.MethodNode;
 import org.eclipse.milo.opcua.sdk.client.api.nodes.Node;
 import org.eclipse.milo.opcua.sdk.client.api.nodes.ObjectNode;
-import org.eclipse.milo.opcua.sdk.client.api.nodes.ObjectTypeNode;
-import org.eclipse.milo.opcua.sdk.client.api.nodes.ReferenceTypeNode;
 import org.eclipse.milo.opcua.sdk.client.api.nodes.VariableNode;
-import org.eclipse.milo.opcua.sdk.client.api.nodes.VariableTypeNode;
-import org.eclipse.milo.opcua.sdk.client.api.nodes.ViewNode;
+import org.eclipse.milo.opcua.sdk.client.nodes.UaDataTypeNode;
+import org.eclipse.milo.opcua.sdk.client.nodes.UaMethodNode;
 import org.eclipse.milo.opcua.sdk.client.nodes.UaNode;
+import org.eclipse.milo.opcua.sdk.client.nodes.UaObjectNode;
+import org.eclipse.milo.opcua.sdk.client.nodes.UaObjectTypeNode;
+import org.eclipse.milo.opcua.sdk.client.nodes.UaReferenceTypeNode;
+import org.eclipse.milo.opcua.sdk.client.nodes.UaVariableNode;
+import org.eclipse.milo.opcua.sdk.client.nodes.UaVariableTypeNode;
+import org.eclipse.milo.opcua.sdk.client.nodes.UaViewNode;
 import org.eclipse.milo.opcua.stack.core.types.builtin.NodeId;
 import org.eclipse.milo.opcua.stack.core.types.enumerated.NodeClass;
 
@@ -48,7 +50,7 @@ public interface AddressSpace {
      * @param nodeId the {@link NodeId} of the instance.
      * @return an {@link ObjectNode} instance for the provided {@link NodeId}.
      */
-    CompletableFuture<ObjectNode> getObjectNode(NodeId nodeId);
+    CompletableFuture<UaObjectNode> getObjectNode(NodeId nodeId);
 
     /**
      * Get an {@link ObjectNode} instance for the provided {@link NodeId}, asserting the concrete implementation will
@@ -59,7 +61,7 @@ public interface AddressSpace {
      * @return an {@link ObjectNode} instance for the provided {@link NodeId} having the provided concrete
      * implementation.
      */
-    <T extends ObjectNode> CompletableFuture<T> getObjectNode(NodeId nodeId, Class<T> nodeClazz);
+    <T extends UaObjectNode> CompletableFuture<T> getObjectNode(NodeId nodeId, Class<T> nodeClazz);
 
     /**
      * Get a {@link VariableNode} instance for the provided {@link NodeId}.
@@ -70,7 +72,7 @@ public interface AddressSpace {
      * @param nodeId the {@link NodeId} of the instance.
      * @return a {@link VariableNode} instance for the provided {@link NodeId}.
      */
-    CompletableFuture<VariableNode> getVariableNode(NodeId nodeId);
+    CompletableFuture<UaVariableNode> getVariableNode(NodeId nodeId);
 
     /**
      * Get a {@link VariableNode} instance for the provided {@link NodeId}, asserting the concrete implementation will
@@ -81,7 +83,7 @@ public interface AddressSpace {
      * @return a {@link VariableNode} instance for the provided {@link NodeId} having the provided concrete
      * implementation.
      */
-    <T extends VariableNode> CompletableFuture<T> getVariableNode(NodeId nodeId, Class<T> nodeClazz);
+    <T extends UaVariableNode> CompletableFuture<T> getVariableNode(NodeId nodeId, Class<T> nodeClazz);
 
     /**
      * Create a {@link Node} instance for the given NodeId.
@@ -93,23 +95,23 @@ public interface AddressSpace {
      * @param nodeId the {@link NodeId} of the instance.
      * @return a {@link Node} instance for the provided {@link NodeId}.
      */
-    CompletableFuture<? extends Node> createNode(NodeId nodeId);
+    CompletableFuture<? extends UaNode> createNode(NodeId nodeId);
 
-    DataTypeNode createDataTypeNode(NodeId nodeId);
+    UaDataTypeNode createDataTypeNode(NodeId nodeId);
 
-    MethodNode createMethodNode(NodeId nodeId);
+    UaMethodNode createMethodNode(NodeId nodeId);
 
-    ObjectNode createObjectNode(NodeId nodeId);
+    UaObjectNode createObjectNode(NodeId nodeId);
 
-    ObjectTypeNode createObjectTypeNode(NodeId nodeId);
+    UaObjectTypeNode createObjectTypeNode(NodeId nodeId);
 
-    ReferenceTypeNode createReferenceTypeNode(NodeId nodeId);
+    UaReferenceTypeNode createReferenceTypeNode(NodeId nodeId);
 
-    VariableNode createVariableNode(NodeId nodeId);
+    UaVariableNode createVariableNode(NodeId nodeId);
 
-    VariableTypeNode createVariableTypeNode(NodeId nodeId);
+    UaVariableTypeNode createVariableTypeNode(NodeId nodeId);
 
-    ViewNode createViewNode(NodeId nodeId);
+    UaViewNode createViewNode(NodeId nodeId);
 
     /**
      * Browse forward for hierarchical references to Method, Object, and Variable nodes.

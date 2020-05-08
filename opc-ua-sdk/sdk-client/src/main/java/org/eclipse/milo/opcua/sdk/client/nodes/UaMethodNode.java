@@ -54,22 +54,22 @@ public class UaMethodNode extends UaNode implements MethodNode {
 
     @Override
     public CompletableFuture<DataValue> readExecutable() {
-        return readAttribute(AttributeId.Executable);
+        return readAttributeAsync(AttributeId.Executable);
     }
 
     @Override
     public CompletableFuture<DataValue> readUserExecutable() {
-        return readAttribute(AttributeId.UserExecutable);
+        return readAttributeAsync(AttributeId.UserExecutable);
     }
 
     @Override
     public CompletableFuture<StatusCode> writeExecutable(DataValue value) {
-        return writeAttribute(AttributeId.Executable, value);
+        return writeAttributeAsync(AttributeId.Executable, value);
     }
 
     @Override
     public CompletableFuture<StatusCode> writeUserExecutable(DataValue value) {
-        return writeAttribute(AttributeId.UserExecutable, value);
+        return writeAttributeAsync(AttributeId.UserExecutable, value);
     }
 
     /**

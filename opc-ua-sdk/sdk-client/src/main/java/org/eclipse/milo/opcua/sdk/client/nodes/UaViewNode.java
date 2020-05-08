@@ -53,22 +53,22 @@ public class UaViewNode extends UaNode implements ViewNode {
 
     @Override
     public CompletableFuture<DataValue> readContainsNoLoops() {
-        return readAttribute(AttributeId.ContainsNoLoops);
+        return readAttributeAsync(AttributeId.ContainsNoLoops);
     }
 
     @Override
     public CompletableFuture<DataValue> readEventNotifier() {
-        return readAttribute(AttributeId.EventNotifier);
+        return readAttributeAsync(AttributeId.EventNotifier);
     }
 
     @Override
     public CompletableFuture<StatusCode> writeContainsNoLoops(DataValue value) {
-        return writeAttribute(AttributeId.ContainsNoLoops, value);
+        return writeAttributeAsync(AttributeId.ContainsNoLoops, value);
     }
 
     @Override
     public CompletableFuture<StatusCode> writeEventNotifier(DataValue value) {
-        return writeAttribute(AttributeId.EventNotifier, value);
+        return writeAttributeAsync(AttributeId.EventNotifier, value);
     }
 
     /**
